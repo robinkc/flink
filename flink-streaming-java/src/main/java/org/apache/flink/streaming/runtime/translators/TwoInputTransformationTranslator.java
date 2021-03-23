@@ -81,6 +81,7 @@ public class TwoInputTransformationTranslator<IN1, IN2, OUT>
                 transformation.getStateKeyType(),
                 transformation.getStateKeySelector1(),
                 transformation.getStateKeySelector2(),
+                transformation.getCoBackpressureThreshold(),
                 context);
     }
 }

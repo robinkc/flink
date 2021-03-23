@@ -172,6 +172,20 @@ public class StreamTwoInputProcessorFactory {
             }
         }
 
+        final TwoInputSelectionHandler inputSelectionHandler = new TwoInputSelectionHandler(
+                inputSelectable);
+
+        //Create appropriate CoBackpressureHandler
+        CoBackpressureWatermarkHandler watermarkHandler = null;
+        final Long coBackpressureThreshold = streamConfig.getCoBackpressureThreshold();
+        if(coBackpressureThreshold == -1) {
+            watermarkHandler = new NoOpCoBackpressureWatermarkHandler();
+        }
+        else{
+            watermarkHandler = new SimpleCoBackpressureWatermarkHandler(
+                    inputSelectionHandler, coBackpressureThreshold);
+        }
+
         StreamTaskNetworkOutput<IN1> output1 =
                 new StreamTaskNetworkOutput<>(
                         streamOperator,
@@ -180,7 +194,7 @@ public class StreamTwoInputProcessorFactory {
                         input1WatermarkGauge,
                         statusTracker,
                         0,
-                        numRecordsIn);
+                        numRecordsIn, watermarkHandler);
         StreamOneInputProcessor<IN1> processor1 =
                 new StreamOneInputProcessor<>(input1, output1, endOfInputAware);
 
@@ -192,12 +206,11 @@ public class StreamTwoInputProcessorFactory {
                         input2WatermarkGauge,
                         statusTracker,
                         1,
-                        numRecordsIn);
+                        numRecordsIn, watermarkHandler);
         StreamOneInputProcessor<IN2> processor2 =
                 new StreamOneInputProcessor<>(input2, output2, endOfInputAware);
 
-        return new StreamTwoInputProcessor<>(
-                new TwoInputSelectionHandler(inputSelectable), processor1, processor2);
+        return new StreamTwoInputProcessor<>(inputSelectionHandler, processor1, processor2);
     }
 
     @SuppressWarnings("unchecked")
@@ -264,6 +277,7 @@ public class StreamTwoInputProcessorFactory {
         private final int inputIndex;
 
         private final Counter numRecordsIn;
+        private CoBackpressureWatermarkHandler watermarkHandler;
 
         private final StreamStatusTracker statusTracker;
 
@@ -274,7 +288,8 @@ public class StreamTwoInputProcessorFactory {
                 WatermarkGauge inputWatermarkGauge,
                 StreamStatusTracker statusTracker,
                 int inputIndex,
-                Counter numRecordsIn) {
+                Counter numRecordsIn,
+                CoBackpressureWatermarkHandler watermarkHandler) {
             super(streamStatusMaintainer);
 
             this.operator = checkNotNull(operator);
@@ -283,6 +298,7 @@ public class StreamTwoInputProcessorFactory {
             this.statusTracker = statusTracker;
             this.inputIndex = inputIndex;
             this.numRecordsIn = numRecordsIn;
+            this.watermarkHandler = watermarkHandler;
         }
 
         @Override
@@ -296,9 +312,12 @@ public class StreamTwoInputProcessorFactory {
             inputWatermarkGauge.setCurrentWatermark(watermark.getTimestamp());
             if (inputIndex == 0) {
                 operator.processWatermark1(watermark);
+                watermarkHandler.handleWatermark1(watermark);
             } else {
                 operator.processWatermark2(watermark);
+                watermarkHandler.handleWatermark2(watermark);
             }
+
         }
 
         @Override
@@ -330,6 +349,64 @@ public class StreamTwoInputProcessorFactory {
                 operator.processLatencyMarker1(latencyMarker);
             } else {
                 operator.processLatencyMarker2(latencyMarker);
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    private interface CoBackpressureWatermarkHandler {
+        void handleWatermark1(Watermark watermark);
+        void handleWatermark2(Watermark watermark);
+    }
+
+    private static class NoOpCoBackpressureWatermarkHandler implements CoBackpressureWatermarkHandler{
+
+        @Override
+        public void handleWatermark1(Watermark watermark) {
+            //Do nothing
+        }
+
+        @Override
+        public void handleWatermark2(Watermark watermark) {
+            //Do nothing
+        }
+    }
+    private static class SimpleCoBackpressureWatermarkHandler implements CoBackpressureWatermarkHandler {
+        private Long input1Watermark = Long.MAX_VALUE;
+        private Long input2Watermark = Long.MAX_VALUE;
+        private final TwoInputSelectionHandler inputSelectionHandler;
+        private final Long coBackpressureThreshold;
+
+        public SimpleCoBackpressureWatermarkHandler(
+                TwoInputSelectionHandler inputSelectionHandler,
+                Long coBackpressureThreshold) {
+            this.inputSelectionHandler = inputSelectionHandler;
+            this.coBackpressureThreshold = coBackpressureThreshold;
+        }
+
+        @Override
+        public void handleWatermark1(Watermark watermark) {
+            input1Watermark = watermark.getTimestamp();
+            handleWatermark(input1Watermark, input2Watermark, 0);
+        }
+
+        @Override
+        public void handleWatermark2(Watermark watermark) {
+            input2Watermark = watermark.getTimestamp();
+            handleWatermark(input2Watermark, input1Watermark, 1);
+        }
+
+        private void handleWatermark(Long watermark1, Long watermark2, int inputIndex) {
+            //Diff will be negative in case we have not yet received any value for watermark2
+            final long diffInWatermark = watermark1 - watermark2;
+
+            //Pause or resume input based on threshold
+            if (diffInWatermark > coBackpressureThreshold) {
+                inputSelectionHandler.pauseInput(inputIndex);
+            } else {
+                inputSelectionHandler.resumePausedInput();
             }
         }
     }

@@ -54,6 +54,19 @@ public abstract class AbstractTwoInputTransformationTranslator<
             @Nullable final KeySelector<IN1, ?> firstKeySelector,
             @Nullable final KeySelector<IN2, ?> secondKeySelector,
             final Context context) {
+        return translateInternal(transformation, firstInputTransformation, secondInputTransformation, operatorFactory, keyTypeInfo, firstKeySelector, secondKeySelector, -1L, context);
+
+    }
+        protected Collection<Integer> translateInternal(
+            final Transformation<OUT> transformation,
+            final Transformation<IN1> firstInputTransformation,
+            final Transformation<IN2> secondInputTransformation,
+            final StreamOperatorFactory<OUT> operatorFactory,
+            @Nullable final TypeInformation<?> keyTypeInfo,
+            @Nullable final KeySelector<IN1, ?> firstKeySelector,
+            @Nullable final KeySelector<IN2, ?> secondKeySelector,
+            final Long coBackpressureThreshold,
+            final Context context) {
         checkNotNull(transformation);
         checkNotNull(firstInputTransformation);
         checkNotNull(secondInputTransformation);
@@ -73,7 +86,8 @@ public abstract class AbstractTwoInputTransformationTranslator<
                 firstInputTransformation.getOutputType(),
                 secondInputTransformation.getOutputType(),
                 transformation.getOutputType(),
-                transformation.getName());
+                transformation.getName(),
+                coBackpressureThreshold);
 
         if (firstKeySelector != null || secondKeySelector != null) {
             checkState(

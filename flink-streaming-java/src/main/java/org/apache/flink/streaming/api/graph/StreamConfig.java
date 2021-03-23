@@ -149,6 +149,14 @@ public class StreamConfig implements Serializable {
         return config.getInteger(VERTEX_NAME, -1);
     }
 
+    public void setCoBackpressureThreshold(Long threshold) {
+            config.setLong("coBackpressureThreshold", threshold);
+    }
+
+    public Long getCoBackpressureThreshold() {
+        return config.getLong("coBackpressureThreshold", -1L);
+    }
+
     /** Fraction of managed memory reserved for the given use case that this operator should use. */
     public void setManagedMemoryFractionOperatorOfUseCase(
             ManagedMemoryUseCase managedMemoryUseCase, double fraction) {

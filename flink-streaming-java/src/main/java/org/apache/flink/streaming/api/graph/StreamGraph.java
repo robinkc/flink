@@ -400,7 +400,8 @@ public class StreamGraph implements Pipeline {
             TypeInformation<IN1> in1TypeInfo,
             TypeInformation<IN2> in2TypeInfo,
             TypeInformation<OUT> outTypeInfo,
-            String operatorName) {
+            String operatorName,
+            Long coBackpressureThreshold) {
 
         Class<? extends AbstractInvokable> vertexClass = TwoInputStreamTask.class;
 
@@ -419,6 +420,8 @@ public class StreamGraph implements Pipeline {
                 in1TypeInfo.createSerializer(executionConfig),
                 in2TypeInfo.createSerializer(executionConfig),
                 outSerializer);
+
+        setCoBackpressureThreshold(vertexID, coBackpressureThreshold);
 
         if (taskOperatorFactory.isOutputTypeConfigurable()) {
             // sets the output type which must be know at StreamGraph creation time
@@ -726,6 +729,11 @@ public class StreamGraph implements Pipeline {
         StreamNode vertex = getStreamNode(vertexID);
         vertex.setSerializersIn(in1, in2);
         vertex.setSerializerOut(out);
+    }
+
+    public void setCoBackpressureThreshold(Integer vertexID, Long coBackpressureThreshold) {
+        StreamNode vertex = getStreamNode(vertexID);
+        vertex.setCoBackpressureThreshold(coBackpressureThreshold);
     }
 
     private <OUT> void setSerializers(

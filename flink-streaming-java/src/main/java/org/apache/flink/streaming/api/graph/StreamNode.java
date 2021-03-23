@@ -87,6 +87,8 @@ public class StreamNode {
 
     private final Map<Integer, StreamConfig.InputRequirement> inputRequirements = new HashMap<>();
 
+    private Long coBackpressureThreshold;
+
     @VisibleForTesting
     public StreamNode(
             Integer id,
@@ -362,6 +364,17 @@ public class StreamNode {
         } else {
             return Optional.empty();
         }
+    }
+
+    public Long getCoBackpressureThreshold() {
+        if(coBackpressureThreshold == null) {
+            return -1L;
+        }
+        return coBackpressureThreshold;
+    }
+
+    public void setCoBackpressureThreshold(Long coBackpressureThreshold) {
+        this.coBackpressureThreshold = coBackpressureThreshold;
     }
 
     @Override

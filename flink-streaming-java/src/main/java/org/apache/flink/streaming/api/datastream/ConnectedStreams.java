@@ -62,12 +62,20 @@ public class ConnectedStreams<IN1, IN2> {
     protected final StreamExecutionEnvironment environment;
     protected final DataStream<IN1> inputStream1;
     protected final DataStream<IN2> inputStream2;
+    private Long coBackpressureThreshold;
 
     protected ConnectedStreams(
             StreamExecutionEnvironment env, DataStream<IN1> input1, DataStream<IN2> input2) {
+        this(env, input1, input2, null);
+    }
+
+    protected ConnectedStreams(
+            StreamExecutionEnvironment env, DataStream<IN1> input1, DataStream<IN2> input2,
+            Long coBackpressureThreshold) {
         this.environment = requireNonNull(env);
         this.inputStream1 = requireNonNull(input1);
         this.inputStream2 = requireNonNull(input2);
+        this.coBackpressureThreshold = coBackpressureThreshold;
     }
 
     public StreamExecutionEnvironment getExecutionEnvironment() {
@@ -465,6 +473,8 @@ public class ConnectedStreams<IN1, IN2> {
 
             // we might be overwriting the one that's already set, but it's the same
             transform.setStateKeyType(keyType2);
+
+            transform.setCoBackpressureThreshold(coBackpressureThreshold);
         }
 
         @SuppressWarnings({"unchecked", "rawtypes"})
@@ -475,4 +485,11 @@ public class ConnectedStreams<IN1, IN2> {
 
         return returnStream;
     }
+
+    // ### For custom Bakcpressure #### //
+    public ConnectedStreams<IN1, IN2> setCoBackpressureThreshold(
+            Long coBackpressureThreshold) {
+        this.coBackpressureThreshold = coBackpressureThreshold;
+        return this;
+     }
 }

@@ -55,6 +55,8 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends PhysicalTransformatio
 
     private TypeInformation<?> stateKeyType;
 
+    private Long coBackpressureThreshold;
+
     /**
      * Creates a new {@code TwoInputTransformation} from the given inputs and operator.
      *
@@ -183,5 +185,16 @@ public class TwoInputTransformation<IN1, IN2, OUT> extends PhysicalTransformatio
     @Override
     public final void setChainingStrategy(ChainingStrategy strategy) {
         operatorFactory.setChainingStrategy(strategy);
+    }
+
+    public Long getCoBackpressureThreshold() {
+        if(coBackpressureThreshold == null) {
+            return -1L;
+        }
+        return coBackpressureThreshold;
+    }
+
+    public void setCoBackpressureThreshold(Long coBackpressureThreshold) {
+        this.coBackpressureThreshold = coBackpressureThreshold;
     }
 }

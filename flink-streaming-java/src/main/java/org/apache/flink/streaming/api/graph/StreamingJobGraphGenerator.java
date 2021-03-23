@@ -641,6 +641,7 @@ public class StreamingJobGraphGenerator {
         StreamNode vertex = streamGraph.getStreamNode(vertexID);
 
         config.setVertexID(vertexID);
+        config.setCoBackpressureThreshold(vertex.getCoBackpressureThreshold());
 
         // build the inputs as a combination of source and network inputs
         final List<StreamEdge> inEdges = vertex.getInEdges();

@@ -35,6 +35,7 @@ public class TwoInputSelectionHandler {
     private InputSelection inputSelection;
 
     private int availableInputsMask;
+    private int pauseInput = -1;
 
     public TwoInputSelectionHandler(@Nullable InputSelectable inputSelectable) {
         this.inputSelectable = inputSelectable;
@@ -51,7 +52,14 @@ public class TwoInputSelectionHandler {
     }
 
     int selectNextInputIndex(int lastReadInputIndex) {
-        return inputSelection.fairSelectNextIndexOutOf2(availableInputsMask, lastReadInputIndex);
+        //If this input index has been paused
+        int indexOutOf2 = inputSelection.fairSelectNextIndexOutOf2(
+                availableInputsMask,
+                lastReadInputIndex);
+        if(indexOutOf2 == pauseInput) {
+            indexOutOf2 = indexOutOf2 == 0 ? 1 : 0;
+        }
+        return indexOutOf2;
     }
 
     boolean shouldSetAvailableForAnotherInput() {
@@ -66,15 +74,33 @@ public class TwoInputSelectionHandler {
         availableInputsMask &= ~(1 << inputIndex);
     }
 
+    /**
+     * Pauses an input
+     * At a point in time only one of the two inputs can be paused. Pausing an input automatically
+     * resumes another input if it was paused earlier.
+     * @param inputIndex The input to pause.
+     */
+    void pauseInput(int inputIndex) {
+        //Automatically resumes the other input
+        pauseInput = inputIndex;
+    }
+
+    /**
+     * Resume the input that was paused earlier, if any.
+     */
+    void resumePausedInput() {
+        pauseInput = -1;
+    }
+
     boolean areAllInputsSelected() {
-        return inputSelection.areAllInputsSelected();
+        return inputSelection.areAllInputsSelected() && pauseInput == -1;
     }
 
     boolean isFirstInputSelected() {
-        return inputSelection.isInputSelected(1);
+        return inputSelection.isInputSelected(1) && pauseInput != 0;
     }
 
     boolean isSecondInputSelected() {
-        return inputSelection.isInputSelected(2);
+        return inputSelection.isInputSelected(2) && pauseInput != 1;
     }
 }
